@@ -997,30 +997,32 @@ func (db *Database) RemoveUser(user string) error {
 }
 
 type indexSpec struct {
-	Name, NS         string
-	Key              bson.D
-	Unique           bool    ",omitempty"
-	DropDups         bool    "dropDups,omitempty"
-	Background       bool    ",omitempty"
-	Sparse           bool    ",omitempty"
-	Bits             int     ",omitempty"
-	Min, Max         float64 ",omitempty"
-	BucketSize       float64 "bucketSize,omitempty"
-	ExpireAfter      int     "expireAfterSeconds,omitempty"
-	Weights          bson.D  ",omitempty"
-	DefaultLanguage  string  "default_language,omitempty"
-	LanguageOverride string  "language_override,omitempty"
-	TextIndexVersion int     "textIndexVersion,omitempty"
+	Name, NS                string
+	Key                     bson.D
+	Unique                  bool    ",omitempty"
+	DropDups                bool    "dropDups,omitempty"
+	Background              bool    ",omitempty"
+	Sparse                  bool    ",omitempty"
+	Bits                    int     ",omitempty"
+	Min, Max                float64 ",omitempty"
+	BucketSize              float64 "bucketSize,omitempty"
+	ExpireAfter             int     "expireAfterSeconds,omitempty"
+	Weights                 bson.D  ",omitempty"
+	DefaultLanguage         string  "default_language,omitempty"
+	LanguageOverride        string  "language_override,omitempty"
+	TextIndexVersion        int     "textIndexVersion,omitempty"
+	PartialFilterExpression bson.M  "partialFilterExpression,omitempty"
 
 	Collation *Collation "collation,omitempty"
 }
 
 type Index struct {
-	Key        []string // Index key fields; prefix name with dash (-) for descending order
-	Unique     bool     // Prevent two documents from having the same index key
-	DropDups   bool     // Drop documents with the same index key as a previously indexed one
-	Background bool     // Build index in background and return immediately
-	Sparse     bool     // Only index documents containing the Key fields
+	Key                     []string // Index key fields; prefix name with dash (-) for descending order
+	Unique                  bool     // Prevent two documents from having the same index key
+	DropDups                bool     // Drop documents with the same index key as a previously indexed one
+	Background              bool     // Build index in background and return immediately
+	Sparse                  bool     // Only index documents containing the Key fields
+	PartialFilterExpression bson.M   //If specified, the index only references documents that match the filter expression
 
 	// If ExpireAfter is defined the server will periodically delete
 	// documents with indexed time.Time older than the provided delta.
@@ -1277,13 +1279,14 @@ func (c *Collection) EnsureIndex(index Index) error {
 	}
 
 	spec := indexSpec{
-		Name:             keyInfo.name,
-		NS:               c.FullName,
-		Key:              keyInfo.key,
-		Unique:           index.Unique,
-		DropDups:         index.DropDups,
-		Background:       index.Background,
-		Sparse:           index.Sparse,
+		Name:                    keyInfo.name,
+		NS:                      c.FullName,
+		Key:                     keyInfo.key,
+		Unique:                  index.Unique,
+		DropDups:                index.DropDups,
+		Background:              index.Background,
+		Sparse:                  index.Sparse,
+		PartialFilterExpression: index.PartialFilterExpression,
 		Bits:             index.Bits,
 		Min:              index.Minf,
 		Max:              index.Maxf,
@@ -1494,20 +1497,21 @@ func (c *Collection) Indexes() (indexes []Index, err error) {
 
 func indexFromSpec(spec indexSpec) Index {
 	index := Index{
-		Name:             spec.Name,
-		Key:              simpleIndexKey(spec.Key),
-		Unique:           spec.Unique,
-		DropDups:         spec.DropDups,
-		Background:       spec.Background,
-		Sparse:           spec.Sparse,
-		Minf:             spec.Min,
-		Maxf:             spec.Max,
-		Bits:             spec.Bits,
-		BucketSize:       spec.BucketSize,
-		DefaultLanguage:  spec.DefaultLanguage,
-		LanguageOverride: spec.LanguageOverride,
-		ExpireAfter:      time.Duration(spec.ExpireAfter) * time.Second,
-		Collation:        spec.Collation,
+		Name:                    spec.Name,
+		Key:                     simpleIndexKey(spec.Key),
+		Unique:                  spec.Unique,
+		DropDups:                spec.DropDups,
+		Background:              spec.Background,
+		Sparse:                  spec.Sparse,
+		Minf:                    spec.Min,
+		Maxf:                    spec.Max,
+		Bits:                    spec.Bits,
+		BucketSize:              spec.BucketSize,
+		DefaultLanguage:         spec.DefaultLanguage,
+		LanguageOverride:        spec.LanguageOverride,
+		ExpireAfter:             time.Duration(spec.ExpireAfter) * time.Second,
+		Collation:               spec.Collation,
+		PartialFilterExpression: spec.PartialFilterExpression,
 	}
 	if float64(int(spec.Min)) == spec.Min && float64(int(spec.Max)) == spec.Max {
 		index.Min = int(spec.Min)
